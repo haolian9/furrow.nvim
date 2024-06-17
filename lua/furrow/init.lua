@@ -1,3 +1,5 @@
+local M = {}
+
 local buflines = require("infra.buflines")
 local dictlib = require("infra.dictlib")
 local jelly = require("infra.jellyfish")("", "debug")
@@ -19,7 +21,7 @@ local ColSpliter = colspliters.Vim
 ---@param delimiting_pattern string
 ---@param max_cols integer
 ---@return furrow.Analysis
-local function analyse(lines, delimiting_pattern, max_cols)
+function M.analyse(lines, delimiting_pattern, max_cols)
   assert(#lines > 1)
 
   ---@type furrow.Analysis
@@ -92,7 +94,6 @@ local function analyse(lines, delimiting_pattern, max_cols)
   return analysis
 end
 
-local furrows
 do
   ---@alias furrow.Gravity 'left'|'center'|'right'
 
@@ -120,7 +121,7 @@ do
   ---@param analysis furrow.Analysis
   ---@param gravity furrow.Gravity
   ---@return string[]
-  function furrows(analysis, gravity)
+  function M.furrows(analysis, gravity)
     local lines = {}
     local rope = ropes.new()
     for li, cols in ipairs(analysis.line_cols) do
@@ -143,27 +144,29 @@ do
   end
 end
 
----@param profile? 'space'
----@param gravity? furrow.Gravity
----@param max_cols? integer @nil=16
-return function(profile, gravity, max_cols)
-  profile = profile or "space"
-  max_cols = max_cols or 16
-  gravity = gravity or "left"
+return setmetatable(M, {
+  ---@param profile? 'space'
+  ---@param gravity? furrow.Gravity
+  ---@param max_cols? integer @nil=16
+  __call = function(_, profile, gravity, max_cols)
+    profile = profile or "space"
+    max_cols = max_cols or 16
+    gravity = gravity or "left"
 
-  local bufnr = ni.get_current_buf()
-  local range = vsel.range(bufnr)
-  if range == nil then return jelly.warn("no selecting lines") end
-  if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
+    local bufnr = ni.get_current_buf()
+    local range = vsel.range(bufnr)
+    if range == nil then return jelly.warn("no selecting lines") end
+    if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
 
-  local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
+    local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
 
-  local analysis
-  if profile == "space" then
-    analysis = analyse(lines, [[\s+]], max_cols)
-  else
-    error("unsupported profile")
-  end
+    local analysis
+    if profile == "space" then
+      analysis = M.analyse(lines, [[\s+]], max_cols)
+    else
+      error("unsupported profile")
+    end
 
-  buflines.replaces(bufnr, range.start_line, range.stop_line, furrows(analysis, gravity))
-end
+    buflines.replaces(bufnr, range.start_line, range.stop_line, M.furrows(analysis, gravity))
+  end,
+})
