@@ -16,8 +16,9 @@ local ColSpliter = colspliters.Vim
 
 ---@param lines string[]
 ---@param delimiting_pattern string
+---@param max_cols integer
 ---@return furrow.Analysis
-local function analyse(lines, delimiting_pattern)
+local function analyse(lines, delimiting_pattern, max_cols)
   assert(#lines > 1)
 
   ---@type furrow.Analysis
@@ -34,47 +35,56 @@ local function analyse(lines, delimiting_pattern)
 
   local next_ci = 1
 
-  local remains = #lines
-  while remains > 1 do
-    local keys = dictlib.keys(line_iters) --snapshot
-    local has_one = false
+  do
+    local remain_line_count = #lines
+    local remain_split_count = max_cols --not include .rest() part
+    while remain_line_count > 1 and remain_split_count > 1 do
+      local keys = dictlib.keys(line_iters) --snapshot
+      local has_one = false
 
-    for _, lnum in ipairs(keys) do
-      local col_iter = line_iters[lnum]
-      if col_iter == nil then goto continue end
+      for _, lnum in ipairs(keys) do
+        local col_iter = assert(line_iters[lnum])
 
-      local col = col_iter.next()
-      if col == nil then
-        line_iters[lnum] = nil
-        remains = remains - 1
-      else
-        has_one = true
-        table.insert(analysis.line_cols[lnum], col)
-        analysis.col_width[next_ci] = math.max(analysis.col_width[next_ci] or 0, ni.strwidth(col))
+        local col = col_iter.next()
+        if col == nil then
+          line_iters[lnum] = nil
+          remain_line_count = remain_line_count - 1
+        else
+          has_one = true
+          table.insert(analysis.line_cols[lnum], col)
+          analysis.col_width[next_ci] = math.max(analysis.col_width[next_ci] or 0, ni.strwidth(col))
+        end
       end
 
-      ::continue::
+      if has_one then
+        next_ci = next_ci + 1
+        remain_split_count = remain_split_count - 1
+      end
     end
+  end
 
+  do --rest
+    local keys = dictlib.keys(line_iters)
+    local has_one = false
+    for _, lnum in ipairs(keys) do
+      local col = line_iters[lnum].rest()
+      line_iters[lnum] = nil
+      if col == nil then
+        ---pass
+      else
+        table.insert(analysis.line_cols[lnum], col)
+        analysis.col_width[next_ci] = math.max(analysis.col_width[next_ci] or 0, ni.strwidth(col))
+        has_one = true
+      end
+    end
     if has_one then next_ci = next_ci + 1 end
   end
 
-  local last_lnum = next(line_iters)
-  if last_lnum ~= nil then
-    local col = line_iters[last_lnum].rest()
-    line_iters[last_lnum] = nil
-    if col == nil then --
-      ---pass
-    else
-      table.insert(analysis.line_cols[last_lnum], col)
-      analysis.col_width[next_ci] = math.max(analysis.col_width[next_ci] or 0, ni.strwidth(col))
-      next_ci = next_ci + 1
-    end
-  end
-
+  ---it's '<=', as there might be not enough cols
+  assert(next_ci - 1 <= max_cols, next_ci - 1)
   analysis.max_cols = next_ci - 1
 
-  assert(next(line_iters) == nil)
+  if next(line_iters) ~= nil then jelly.fatal("RuntimeError", "line_iters should be empty: %s", line_iters) end
 
   return analysis
 end
@@ -128,9 +138,12 @@ end
 
 ---@param mode? 'space'
 ---@param gravity? furrow.Gravity
-return function(mode, gravity)
+---@param max_cols? integer @nil=16
+return function(mode, gravity, max_cols)
   mode = mode or "space"
+  max_cols = max_cols or 16
   gravity = gravity or "left"
+  jelly.debug("mode=%s, max_cols=%s, gravity=%s", mode, max_cols, gravity)
 
   local bufnr = ni.get_current_buf()
   local range = vsel.range(bufnr)
@@ -140,10 +153,11 @@ return function(mode, gravity)
 
   local analysis
   if mode == "space" then
-    analysis = analyse(lines, [[\s+]])
+    analysis = analyse(lines, [[\s+]], max_cols)
   else
     error("unsupported mode")
   end
 
+  --todo: indent
   buflines.replaces(bufnr, range.start_line, range.stop_line, furrows(analysis, gravity))
 end
