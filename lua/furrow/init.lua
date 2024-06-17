@@ -8,6 +8,7 @@ local vsel = require("infra.vsel")
 
 local colspliters = require("furrow.colspliters")
 local ropes = require("string.buffer")
+local profiles = require("furrow.profiles").Vim
 
 local ColSpliter = colspliters.Vim
 
@@ -120,19 +121,29 @@ do
 
   ---@param analysis furrow.Analysis
   ---@param gravity furrow.Gravity
+  ---@param clod? string
   ---@return string[]
-  function M.furrows(analysis, gravity)
+  function M.furrows(analysis, gravity, clod)
     local lines = {}
     local rope = ropes.new()
     for li, cols in ipairs(analysis.line_cols) do
       if #cols == 0 then goto continue end
+
+      if #cols == 1 then
+        rope:put(analysis.indents, cols[1])
+        goto continue
+      end
 
       rope:put(analysis.indents)
       for ci = 1, #cols - 1 do
         local col = cols[ci]
         local width = assert(analysis.col_width[ci])
         rope:put(padding(col, width, gravity))
-        rope:put(" ")
+        if clod ~= nil then
+          rope:put(" ", clod, " ")
+        else
+          rope:put(" ")
+        end
       end
       ---no trailing spaces
       rope:put(cols[#cols])
@@ -144,29 +155,26 @@ do
   end
 end
 
-return setmetatable(M, {
-  ---@param profile? 'space'
-  ---@param gravity? furrow.Gravity
-  ---@param max_cols? integer @nil=16
-  __call = function(_, profile, gravity, max_cols)
-    profile = profile or "space"
-    max_cols = max_cols or 16
-    gravity = gravity or "left"
+---@param mode? 'space'|'='
+---@param gravity? furrow.Gravity
+---@param max_cols? integer @nil=16
+function M.plough(mode, gravity, max_cols)
+  mode = mode or "space"
+  max_cols = max_cols or 16
+  gravity = gravity or "left"
 
-    local bufnr = ni.get_current_buf()
-    local range = vsel.range(bufnr)
-    if range == nil then return jelly.warn("no selecting lines") end
-    if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
+  local bufnr = ni.get_current_buf()
+  local range = vsel.range(bufnr)
+  if range == nil then return jelly.warn("no selecting lines") end
+  if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
 
-    local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
+  local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
 
-    local analysis
-    if profile == "space" then
-      analysis = M.analyse(lines, [[\s+]], max_cols)
-    else
-      error("unsupported profile")
-    end
+  local profile = assert(profiles[mode])
+  local analysis = M.analyse(lines, profile.pattern, max_cols)
+  local furrows = M.furrows(analysis, gravity, profile.clod)
 
-    buflines.replaces(bufnr, range.start_line, range.stop_line, M.furrows(analysis, gravity))
-  end,
-})
+  buflines.replaces(bufnr, range.start_line, range.stop_line, furrows)
+end
+
+return M

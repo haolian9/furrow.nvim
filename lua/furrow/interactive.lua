@@ -8,6 +8,7 @@ local rifts = require("infra.rifts")
 local vsel = require("infra.vsel")
 
 local furrow = require("furrow")
+local profiles = require("furrow.profiles").Vim
 
 local param_ns = ni.create_namespace("furrow:interactive:params")
 
@@ -24,7 +25,7 @@ local function get_anchor_line(bufnr, xmid)
   return line
 end
 
-local function main()
+return function()
   local host_winid = ni.get_current_win()
   local host_bufnr = ni.win_get_buf(host_winid)
   local range = assert(vsel.range(host_bufnr))
@@ -33,14 +34,14 @@ local function main()
   local param_winid = rifts.open.win(param_bufnr, true, { relative = "win", width = 25, height = 3, col = range.start_col, row = range.stop_line + 1 })
 
   local xmids = {}
-  xmids.profile = ni.buf_set_extmark(param_bufnr, param_ns, 0, 0, { virt_text = { { "profile", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+  xmids.mode = ni.buf_set_extmark(param_bufnr, param_ns, 0, 0, { virt_text = { { "mode", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
   xmids.gravity = ni.buf_set_extmark(param_bufnr, param_ns, 1, 0, { virt_text = { { "gravity", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
   xmids.max_cols = ni.buf_set_extmark(param_bufnr, param_ns, 2, 0, { virt_text = { { "max_cols", "question" }, { " " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
 
   local aug = augroups.BufAugroup(param_bufnr, false)
 
   local lines = buflines.lines(host_bufnr, range.start_line, range.stop_line)
-  local newlines
+  local furrows
   local preview_bufnr, preview_winid = -1, -1
 
   do
@@ -62,8 +63,8 @@ local function main()
     aug:once("BufWipeout", {
       callback = function()
         aug:unlink()
-        assert(newlines ~= nil)
-        if confirmed then buflines.replaces(host_bufnr, range.start_line, range.stop_line, newlines) end
+        assert(furrows ~= nil)
+        if confirmed then buflines.replaces(host_bufnr, range.start_line, range.stop_line, furrows) end
         ni.win_close(preview_winid, false)
       end,
     })
@@ -71,26 +72,28 @@ local function main()
 
   aug:repeats({ "InsertLeave", "TextChanged" }, {
     callback = function()
-      local profile = get_anchor_line(param_bufnr, xmids.profile)
+      local mode = get_anchor_line(param_bufnr, xmids.mode)
       local gravity = get_anchor_line(param_bufnr, xmids.gravity)
       local max_cols = get_anchor_line(param_bufnr, xmids.max_cols)
-      if not (profile and gravity and max_cols) then return jelly.info("incomplete params, refuse to preview") end
+      if not (mode and gravity and max_cols) then return jelly.info("incomplete params") end
       ---@diagnostic disable-next-line: cast-local-type
       max_cols = assert(tonumber(max_cols))
 
-      local analysis = furrow.analyse(lines, [[\s+]], max_cols)
-      newlines = furrow.furrows(analysis, gravity)
+      local profile = profiles[mode]
+      if profile == nil then return jelly.warn("unexpected mode: %s", mode) end
+
+      local analysis = furrow.analyse(lines, profile.pattern, max_cols)
+
+      furrows = furrow.furrows(analysis, gravity, profile.clod)
 
       if not ni.win_is_valid(preview_winid) then
         assert(not ni.buf_is_valid(preview_winid))
         preview_bufnr = Ephemeral()
-        preview_winid = rifts.open.win(preview_bufnr, false, { relative = "win", win = host_winid, width = ni.win_get_height(host_winid), height = #newlines, col = range.start_col, row = range.start_line })
+        preview_winid = rifts.open.win(preview_bufnr, false, { relative = "win", win = host_winid, width = ni.win_get_height(host_winid), height = #furrows, col = range.start_col, row = range.start_line })
         ni.win_set_hl_ns(preview_winid, rifts.ns)
       end
-      buflines.replaces_all(preview_bufnr, newlines)
+      buflines.replaces_all(preview_bufnr, furrows)
       assert(ni.win_get_buf(preview_winid) == preview_bufnr)
     end,
   })
 end
-
-main()
