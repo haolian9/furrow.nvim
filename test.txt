@@ -21,3 +21,8 @@ a = b = x
 ab = c = x
 abc = d = x
 a, b = c, d = x, y
+
+foo(a, b, c)
+foo(aaa, b, c)
+foo(aaa, bbbb, cg
+goo(a, aaa, bbbb, c)
