@@ -27,5 +27,10 @@ align gravity
     * '---@class foo'
 
 
-live preview
+preset profiles
+* regular text
+* source code
 
+interactive UX
+* live preview
+* pannel

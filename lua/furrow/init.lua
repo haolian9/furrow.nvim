@@ -10,6 +10,7 @@ local ropes = require("string.buffer")
 local ColSpliter = colspliters.Vim
 
 ---@class furrow.Analysis
+---@field indents string
 ---@field max_cols integer
 ---@field line_cols string[][]
 ---@field col_width integer[]
@@ -22,7 +23,9 @@ local function analyse(lines, delimiting_pattern, max_cols)
   assert(#lines > 1)
 
   ---@type furrow.Analysis
-  local analysis = { max_cols = 0, line_cols = {}, col_width = {} }
+  local analysis = { indents = "", max_cols = 0, line_cols = {}, col_width = {} }
+
+  analysis.indents = string.match(lines[1], "^%s+") or ""
 
   for i, _ in ipairs(lines) do
     analysis.line_cols[i] = {}
@@ -80,7 +83,7 @@ local function analyse(lines, delimiting_pattern, max_cols)
     if has_one then next_ci = next_ci + 1 end
   end
 
-  ---it's '<=', as there might be not enough cols
+  ---it's less-than, as there might be not enough cols
   assert(next_ci - 1 <= max_cols, next_ci - 1)
   analysis.max_cols = next_ci - 1
 
@@ -121,6 +124,9 @@ do
     local lines = {}
     local rope = ropes.new()
     for li, cols in ipairs(analysis.line_cols) do
+      if #cols == 0 then goto continue end
+
+      rope:put(analysis.indents)
       for ci = 1, #cols - 1 do
         local col = cols[ci]
         local width = assert(analysis.col_width[ci])
@@ -130,34 +136,34 @@ do
       ---no trailing spaces
       rope:put(cols[#cols])
 
+      ::continue::
       lines[li] = rope:get()
     end
     return lines
   end
 end
 
----@param mode? 'space'
+---@param profile? 'space'
 ---@param gravity? furrow.Gravity
 ---@param max_cols? integer @nil=16
-return function(mode, gravity, max_cols)
-  mode = mode or "space"
+return function(profile, gravity, max_cols)
+  profile = profile or "space"
   max_cols = max_cols or 16
   gravity = gravity or "left"
-  jelly.debug("mode=%s, max_cols=%s, gravity=%s", mode, max_cols, gravity)
 
   local bufnr = ni.get_current_buf()
   local range = vsel.range(bufnr)
   if range == nil then return jelly.warn("no selecting lines") end
+  if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
 
   local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
 
   local analysis
-  if mode == "space" then
+  if profile == "space" then
     analysis = analyse(lines, [[\s+]], max_cols)
   else
-    error("unsupported mode")
+    error("unsupported profile")
   end
 
-  --todo: indent
   buflines.replaces(bufnr, range.start_line, range.stop_line, furrows(analysis, gravity))
 end

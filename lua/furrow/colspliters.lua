@@ -4,10 +4,17 @@ local M = {}
 ---@field next fun():string?
 ---@field rest function():string?
 
+local empty = {
+  next = function() end,
+  rest = function() end,
+}
+
 ---@param str string
 ---@param delimiting_pattern string
 ---@return furrow.ColSpliter
 function M.Lua(str, delimiting_pattern)
+  if #str == 0 then return empty end
+
   local offset = 1
 
   do --lstrip
@@ -46,7 +53,8 @@ end
 ---@param delimiting_pattern string @vim very-magic pattern
 ---@return furrow.ColSpliter
 function M.Vim(str, delimiting_pattern)
-  assert(#str > 0)
+  if #str == 0 then return empty end
+
   local regex = vim.regex([[\v]] .. delimiting_pattern)
   local remain = str
 
