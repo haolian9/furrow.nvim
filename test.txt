@@ -20,9 +20,10 @@ aaa bbbb ccc
 a = b = x
 ab = c = x
 abc = d = x
+xxxxx = yy = zzz = www
 a, b = c, d = x, y
 
-foo(a, b, c)
+goo(a, b, c)
 foo(aaa, b, c)
-foo(aaa, bbbb, cg
+foo(aaa, bbbb, cg, d)
 goo(a, aaa, bbbb, c)

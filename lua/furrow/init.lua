@@ -98,32 +98,50 @@ end
 do
   ---@alias furrow.Gravity 'left'|'center'|'right'
 
-  ---@param str string
-  ---@param length integer
-  ---@param gravity furrow.Gravity
+  ---@param rope string.buffer
+  ---@param clods string[]
+  ---@param clods_length integer
+  ---@param pad_length integer
+  ---@param pad_gravity furrow.Gravity
   ---@return ... string
-  local function padding(str, length, gravity)
-    local short = length - ni.strwidth(str)
-    if short <= 0 then return str end
+  local function padding(rope, clods, clods_length, pad_length, pad_gravity)
+    local short = pad_length - clods_length
+    if short <= 0 then
+      rope:put(unpack(clods))
+      return
+    end
 
-    if gravity == "center" then
+    if pad_gravity == "center" then
       local left = string.rep(" ", math.floor(short / 2))
       local right = string.rep(" ", math.ceil(short / 2))
-      return left, str, right
+      rope:put(left)
+      rope:put(unpack(clods))
+      rope:put(right)
+      return
     end
 
     local pads = string.rep(" ", short)
-    if gravity == "left" then return str, pads end
-    if gravity == "right" then return pads, str end
+    if pad_gravity == "left" then
+      rope:put(unpack(clods))
+      rope:put(pads)
+      return
+    end
+
+    if pad_gravity == "right" then
+      rope:put(pads)
+      rope:put(unpack(clods))
+      return
+    end
 
     error("unreachable")
   end
 
   ---@param analysis furrow.Analysis
   ---@param gravity furrow.Gravity
-  ---@param clod? string
+  ---@param clods fun(clay:string):string[]
+  ---@param trailing string
   ---@return string[]
-  function M.furrows(analysis, gravity, clod)
+  function M.furrows(analysis, gravity, clods, trailing)
     local lines = {}
     local rope = ropes.new()
     for li, cols in ipairs(analysis.line_cols) do
@@ -135,15 +153,11 @@ do
       end
 
       rope:put(analysis.indents)
-      for ci = 1, #cols - 1 do
+      for ci = 1, #cols - 1 do --only pad cols[0:-1]
         local col = cols[ci]
         local width = assert(analysis.col_width[ci])
-        rope:put(padding(col, width, gravity))
-        if clod ~= nil then
-          rope:put(" ", clod, " ")
-        else
-          rope:put(" ")
-        end
+        padding(rope, clods(col), #col, width, gravity)
+        rope:put(trailing)
       end
       ---no trailing spaces
       rope:put(cols[#cols])
@@ -172,7 +186,7 @@ function M.plough(mode, gravity, max_cols)
 
   local profile = assert(profiles[mode])
   local analysis = M.analyse(lines, profile.pattern, max_cols)
-  local furrows = M.furrows(analysis, gravity, profile.clod)
+  local furrows = M.furrows(analysis, gravity, profile.clods, profile.trailing)
 
   buflines.replaces(bufnr, range.start_line, range.stop_line, furrows)
 end

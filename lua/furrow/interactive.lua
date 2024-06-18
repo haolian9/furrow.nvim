@@ -31,7 +31,14 @@ return function()
   local range = assert(vsel.range(host_bufnr))
 
   local param_bufnr = Ephemeral({ modifiable = true, undolevels = 5 }, { "space", "left", "3" })
-  local param_winid = rifts.open.win(param_bufnr, true, { relative = "win", width = 25, height = 3, col = range.start_col, row = range.stop_line + 1 })
+  --stylua: ignore start
+  local param_winid = rifts.open.win(param_bufnr, true, {
+    relative = "win", win = host_winid,
+    border = "single",
+    width = 25, height = 3,
+    col = range.start_col, row = range.stop_line + 1
+  })
+  --stylua: ignore end
 
   local xmids = {}
   xmids.mode = ni.buf_set_extmark(param_bufnr, param_ns, 0, 0, { virt_text = { { "mode", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
@@ -84,12 +91,19 @@ return function()
 
       local analysis = furrow.analyse(lines, profile.pattern, max_cols)
 
-      furrows = furrow.furrows(analysis, gravity, profile.clod)
+      furrows = furrow.furrows(analysis, gravity, profile.clods, profile.trailing)
 
       if not ni.win_is_valid(preview_winid) then
         assert(not ni.buf_is_valid(preview_winid))
         preview_bufnr = Ephemeral()
-        preview_winid = rifts.open.win(preview_bufnr, false, { relative = "win", win = host_winid, width = ni.win_get_height(host_winid), height = #furrows, col = range.start_col, row = range.start_line })
+        --stylua: ignore start
+        preview_winid = rifts.open.win(preview_bufnr, false, {
+          relative = "win", win = host_winid,
+          border = "single",
+          width = ni.win_get_height(host_winid), height = #furrows,
+          col = range.start_col, row = range.start_line
+        })
+        --stylua: ignore end
         ni.win_set_hl_ns(preview_winid, rifts.ns)
       end
       buflines.replaces_all(preview_bufnr, furrows)
