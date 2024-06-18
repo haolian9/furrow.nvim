@@ -10,12 +10,13 @@ local vsel = require("infra.vsel")
 local furrow = require("furrow")
 local profiles = require("furrow.profiles").Vim
 
-local param_ns = ni.create_namespace("furrow:interactive:params")
+local param_xm_ns = ni.create_namespace("furrow:interactive:params")
+local preview_xm_ns = ni.create_namespace("furrow:interactive:preview")
 
 ---@param xmid integer
 ---@return string?
 local function get_anchor_line(bufnr, xmid)
-  local xm = ni.buf_get_extmark_by_id(bufnr, param_ns, xmid, { details = true })
+  local xm = ni.buf_get_extmark_by_id(bufnr, param_xm_ns, xmid, { details = true })
   if #xm == 0 then return end
   ---@diagnostic disable-next-line: undefined-field
   if xm[3].invalid then return end
@@ -31,25 +32,26 @@ return function()
   local range = assert(vsel.range(host_bufnr))
 
   local param_bufnr = Ephemeral({ modifiable = true, undolevels = 5 }, { "spc", "left", "3" })
-  --stylua: ignore start
-  local param_winid = rifts.open.win(param_bufnr, true, {
-    relative = "win", win = host_winid,
-    border = "single",
-    width = 25, height = 3,
-    col = range.start_col, row = range.stop_line + 1
-  })
-  --stylua: ignore end
 
   local xmids = {}
-  xmids.mode = ni.buf_set_extmark(param_bufnr, param_ns, 0, 0, { virt_text = { { "mode", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
-  xmids.gravity = ni.buf_set_extmark(param_bufnr, param_ns, 1, 0, { virt_text = { { "gravity", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
-  xmids.max_cols = ni.buf_set_extmark(param_bufnr, param_ns, 2, 0, { virt_text = { { "max_cols", "question" }, { " " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+  xmids.mode = ni.buf_set_extmark(param_bufnr, param_xm_ns, 0, 0, { virt_text = { { "mode", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+  xmids.gravity = ni.buf_set_extmark(param_bufnr, param_xm_ns, 1, 0, { virt_text = { { "gravity", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+  xmids.max_cols = ni.buf_set_extmark(param_bufnr, param_xm_ns, 2, 0, { virt_text = { { "max_cols", "question" }, { " " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+
+  --stylua: ignore start
+  local param_winid = rifts.open.win(param_bufnr, true, {
+    relative = "cursor",
+    border = "single",
+    col = 0, row = range.stop_line - range.start_line + 1,
+    width = 25, height = 3,
+  })
+  --stylua: ignore end
+  ni.win_set_hl_ns(param_winid, rifts.ns)
 
   local aug = augroups.BufAugroup(param_bufnr, false)
 
   local lines = buflines.lines(host_bufnr, range.start_line, range.stop_line)
   local furrows
-  local preview_bufnr, preview_winid = -1, -1
 
   do
     local bm = bufmap.wraps(param_bufnr)
@@ -72,7 +74,8 @@ return function()
         aug:unlink()
         assert(furrows ~= nil)
         if confirmed then buflines.replaces(host_bufnr, range.start_line, range.stop_line, furrows) end
-        ni.win_close(preview_winid, false)
+        ---NB: xmarks can conflict with buflines.*
+        ni.buf_clear_namespace(host_bufnr, preview_xm_ns, 0, -1)
       end,
     })
   end
@@ -90,24 +93,19 @@ return function()
       if profile == nil then return jelly.warn("unexpected mode: %s", mode) end
 
       local analysis = furrow.analyse(lines, profile.pattern, max_cols)
-
       furrows = furrow.furrows(analysis, gravity, profile.clods, profile.trailing)
 
-      if not ni.win_is_valid(preview_winid) then
-        assert(not ni.buf_is_valid(preview_winid))
-        preview_bufnr = Ephemeral()
-        --stylua: ignore start
-        preview_winid = rifts.open.win(preview_bufnr, false, {
-          relative = "win", win = host_winid,
-          border = "single",
-          width = ni.win_get_height(host_winid), height = #furrows,
-          col = range.start_col, row = range.start_line
+      ni.buf_clear_namespace(host_bufnr, preview_xm_ns, range.start_line, range.stop_line)
+
+      for i, line in ipairs(furrows) do
+        local lnum = i + range.start_line - 1
+        ni.buf_set_extmark(host_bufnr, preview_xm_ns, lnum, 0, {
+          virt_text = { { line } },
+          virt_text_pos = "overlay",
+          invalidate = true,
+          undo_restore = false,
         })
-        --stylua: ignore end
-        ni.win_set_hl_ns(preview_winid, rifts.ns)
       end
-      buflines.replaces_all(preview_bufnr, furrows)
-      assert(ni.win_get_buf(preview_winid) == preview_bufnr)
     end,
   })
 end
