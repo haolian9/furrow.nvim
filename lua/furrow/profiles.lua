@@ -11,7 +11,7 @@ local M = {}
 
 do
   local Vim = {}
-  Vim.space = {
+  Vim["spc"] = {
     pattern = [[\s+]],
     clods = function(clay) return { clay } end,
     trailing = " ",

@@ -30,7 +30,7 @@ return function()
   local host_bufnr = ni.win_get_buf(host_winid)
   local range = assert(vsel.range(host_bufnr))
 
-  local param_bufnr = Ephemeral({ modifiable = true, undolevels = 5 }, { "space", "left", "3" })
+  local param_bufnr = Ephemeral({ modifiable = true, undolevels = 5 }, { "spc", "left", "3" })
   --stylua: ignore start
   local param_winid = rifts.open.win(param_bufnr, true, {
     relative = "win", win = host_winid,
