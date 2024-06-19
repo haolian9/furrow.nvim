@@ -73,7 +73,10 @@ return function()
       callback = function()
         aug:unlink()
         assert(furrows ~= nil)
-        if confirmed then buflines.replaces(host_bufnr, range.start_line, range.stop_line, furrows) end
+        if confirmed then
+          buflines.replaces(host_bufnr, range.start_line, range.stop_line, furrows)
+          vsel.restore_gv(host_bufnr, range)
+        end
         ---NB: xmarks can conflict with buflines.*
         ni.buf_clear_namespace(host_bufnr, preview_ns, 0, -1)
       end,

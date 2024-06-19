@@ -5,6 +5,7 @@ local dictlib = require("infra.dictlib")
 local jelly = require("infra.jellyfish")("", "debug")
 local ni = require("infra.ni")
 local vsel = require("infra.vsel")
+local vsel = require("infra.vsel")
 
 local colspliters = require("furrow.colspliters")
 local ropes = require("string.buffer")
@@ -156,7 +157,7 @@ do
       for ci = 1, #cols - 1 do --only pad cols[0:-1]
         local col = cols[ci]
         local width = assert(analysis.col_width[ci])
-        padding(rope, clods(col), #col, width, gravity)
+        padding(rope, clods(col), ni.strwidth(col), width, gravity)
         rope:put(trailing)
       end
       ---no trailing spaces
@@ -189,6 +190,7 @@ function M.plough(mode, gravity, max_cols)
   local furrows = M.furrows(analysis, gravity, profile.clods, profile.trailing)
 
   buflines.replaces(bufnr, range.start_line, range.stop_line, furrows)
+  vsel.restore_gv(bufnr, range)
 end
 
 return M
