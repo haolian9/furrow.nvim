@@ -5,7 +5,6 @@ local dictlib = require("infra.dictlib")
 local jelly = require("infra.jellyfish")("", "debug")
 local ni = require("infra.ni")
 local vsel = require("infra.vsel")
-local vsel = require("infra.vsel")
 
 local colspliters = require("furrow.colspliters")
 local ropes = require("string.buffer")
