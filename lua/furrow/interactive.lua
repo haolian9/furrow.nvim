@@ -26,27 +26,38 @@ local function get_anchor_line(bufnr, xmid)
   return line
 end
 
+---@param bufnr integer
+---@param lnum integer
+---@param title string
+---@return integer xmid
+local function place_input_title(bufnr, lnum, title)
+  return ni.buf_set_extmark(bufnr, form_ns, lnum, 0, {
+    virt_text = { { title, "question" } },
+    virt_text_pos = "eol",
+    invalidate = true,
+    undo_restore = true,
+  })
+end
+
 return function()
   local host_winid = ni.get_current_win()
   local host_bufnr = ni.win_get_buf(host_winid)
   local range = assert(vsel.range(host_bufnr))
 
-  local form_bufnr = Ephemeral({ modifiable = true, undolevels = 5 }, { "spc", "left", "3" })
+  local form_bufnr = Ephemeral({ modifiable = true, undolevels = 5, namepat = "furrow://{bufnr}" }, { "spc", "left", "3" })
 
   local xmids = {}
-  xmids.mode = ni.buf_set_extmark(form_bufnr, form_ns, 0, 0, { virt_text = { { "mode", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
-  xmids.gravity = ni.buf_set_extmark(form_bufnr, form_ns, 1, 0, { virt_text = { { "gravity", "question" }, { "  " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
-  xmids.max_cols = ni.buf_set_extmark(form_bufnr, form_ns, 2, 0, { virt_text = { { "max_cols", "question" }, { " " } }, virt_text_pos = "eol", invalidate = true, undo_restore = true })
+  xmids.mode = place_input_title(form_bufnr, 0, "mode")
+  xmids.gravity = place_input_title(form_bufnr, 1, "gravity")
+  xmids.max_cols = place_input_title(form_bufnr, 2, "max-cols")
 
   --stylua: ignore start
   local form_winid = rifts.open.win(form_bufnr, true, {
     relative = "cursor",
-    border = "single",
     col = 0, row = range.stop_line - range.start_line + 1,
     width = 25, height = 3,
   })
   --stylua: ignore end
-  ni.win_set_hl_ns(form_winid, rifts.ns)
 
   local aug = augroups.BufAugroup(form_bufnr, false)
 
@@ -101,9 +112,14 @@ return function()
       ni.buf_clear_namespace(host_bufnr, preview_ns, range.start_line, range.stop_line)
 
       for i, line in ipairs(furrows) do
+        local blanks --if furrowed line is shorter than the original, covering with blanks
+        local short = ni.strwidth(lines[i]) - ni.strwidth(line)
+        if short > 0 then blanks = { string.rep(" ", short) } end
+
         local lnum = i + range.start_line - 1
+
         ni.buf_set_extmark(host_bufnr, preview_ns, lnum, 0, {
-          virt_text = { { line } },
+          virt_text = { { line }, blanks },
           virt_text_pos = "overlay",
           invalidate = true,
           undo_restore = false,
