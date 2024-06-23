@@ -9,26 +9,22 @@ local M = {}
 ---@field clods fun(clay:string):string[] @apply to cols[0:-1], before padding
 ---@field trailing string @apply to cols[0:-1], after padding
 
-do
-  local Vim = {}
-  Vim["spc"] = {
-    pattern = [[\s+]],
-    clods = function(clay) return { clay } end,
-    trailing = " ",
-  }
+M["spc"] = {
+  pattern = [[\s+]],
+  clods = function(clay) return { clay } end,
+  trailing = " ",
+}
 
-  Vim["="] = {
-    pattern = [[\s*\=\s*]],
-    clods = function(clay) return { clay } end,
-    trailing = " = ",
-  }
-  Vim[","] = {
-    pattern = [[\s*,\s*]],
-    clods = function(clay) return { clay, "," } end,
-    trailing = " ",
-  }
+M["="] = {
+  pattern = [[\s*\=\s*]],
+  clods = function(clay) return { clay } end,
+  trailing = " = ",
+}
 
-  M.Vim = Vim
-end
+M[","] = {
+  pattern = [[\s*,\s*]],
+  clods = function(clay) return { clay, "," } end,
+  trailing = " ",
+}
 
 return M

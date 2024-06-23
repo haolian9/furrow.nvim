@@ -8,7 +8,7 @@ local rifts = require("infra.rifts")
 local vsel = require("infra.vsel")
 
 local furrow = require("furrow")
-local profiles = require("furrow.profiles").Vim
+local profiles = require("furrow.profiles")
 
 local form_ns = ni.create_namespace("furrow:interactive:form")
 local preview_ns = ni.create_namespace("furrow:interactive:preview")
@@ -42,7 +42,12 @@ end
 return function()
   local host_winid = ni.get_current_win()
   local host_bufnr = ni.win_get_buf(host_winid)
-  local range = assert(vsel.range(host_bufnr))
+
+  local range = vsel.range(host_bufnr)
+  if range == nil then return jelly.warn("no selecting lines") end
+  if range.stop_line - range.start_line < 2 then return jelly.warn("less than 2 lines") end
+
+  local lines = buflines.lines(host_bufnr, range.start_line, range.stop_line)
 
   local form_bufnr = Ephemeral({ modifiable = true, undolevels = 5, namepat = "furrow://{bufnr}" }, { "spc", "left", "3" })
 
@@ -51,17 +56,16 @@ return function()
   xmids.gravity = place_input_title(form_bufnr, 1, "gravity")
   xmids.max_cols = place_input_title(form_bufnr, 2, "max-cols")
 
-  --stylua: ignore start
-  local form_winid = rifts.open.win(form_bufnr, true, {
-    relative = "cursor",
-    col = 0, row = range.stop_line - range.start_line + 1,
-    width = 25, height = 3,
-  })
-  --stylua: ignore end
+  local form_winid
+  do
+    local indents = assert(string.match(lines[1], "^%s*"))
+    local col = #indents
+    local row = range.stop_line - range.start_line + 1
+    form_winid = rifts.open.win(form_bufnr, true, { relative = "cursor", col = col, row = row, width = 25, height = 3 })
+  end
 
   local aug = augroups.BufAugroup(form_bufnr, false)
 
-  local lines = buflines.lines(host_bufnr, range.start_line, range.stop_line)
   local furrows
 
   do
@@ -88,7 +92,6 @@ return function()
           buflines.replaces(host_bufnr, range.start_line, range.stop_line, furrows)
           vsel.restore_gv(host_bufnr, range)
         end
-        ---NB: xmarks can conflict with buflines.*
         ni.buf_clear_namespace(host_bufnr, preview_ns, 0, -1)
       end,
     })

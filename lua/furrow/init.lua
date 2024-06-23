@@ -6,29 +6,32 @@ local jelly = require("infra.jellyfish")("", "debug")
 local ni = require("infra.ni")
 local vsel = require("infra.vsel")
 
-local colspliters = require("furrow.colspliters")
+local colspliter = require("furrow.colspliter")
 local ropes = require("string.buffer")
-local profiles = require("furrow.profiles").Vim
-
-local ColSpliter = colspliters.Vim
+local profiles = require("furrow.profiles")
 
 ---@class furrow.Analysis
 ---@field indents string
----@field max_cols integer
 ---@field line_cols string[][]
 ---@field col_width integer[]
 
----@param lines string[]
+---@param raw_lines string[]
 ---@param delimiting_pattern string
 ---@param max_cols integer
 ---@return furrow.Analysis
-function M.analyse(lines, delimiting_pattern, max_cols)
-  assert(#lines > 1)
+function M.analyse(raw_lines, delimiting_pattern, max_cols)
+  assert(#raw_lines > 1)
+
+  ---stripped leading blanks
+  local lines = {}
+  for i, line in ipairs(raw_lines) do
+    lines[i] = assert(select(1, string.gsub(line, "^%s*", "")))
+  end
 
   ---@type furrow.Analysis
-  local analysis = { indents = "", max_cols = 0, line_cols = {}, col_width = {} }
+  local analysis = { indents = "", line_cols = {}, col_width = {} }
 
-  analysis.indents = string.match(lines[1], "^%s+") or ""
+  analysis.indents = string.match(raw_lines[1], "^%s+") or ""
 
   for i, _ in ipairs(lines) do
     analysis.line_cols[i] = {}
@@ -36,7 +39,7 @@ function M.analyse(lines, delimiting_pattern, max_cols)
 
   local line_iters = {} ---@type {[integer]: {next:fun(), rest:fun()}}
   for i, line in ipairs(lines) do
-    line_iters[i] = ColSpliter(line, delimiting_pattern)
+    line_iters[i] = colspliter(line, delimiting_pattern)
   end
 
   local next_ci = 1
@@ -88,7 +91,6 @@ function M.analyse(lines, delimiting_pattern, max_cols)
 
   ---it's less-than, as there might be not enough cols
   assert(next_ci - 1 <= max_cols, next_ci - 1)
-  analysis.max_cols = next_ci - 1
 
   if next(line_iters) ~= nil then jelly.fatal("RuntimeError", "line_iters should be empty: %s", line_iters) end
 
@@ -136,6 +138,8 @@ do
     error("unreachable")
   end
 
+  local rope = ropes.new()
+
   ---@param analysis furrow.Analysis
   ---@param gravity furrow.Gravity
   ---@param clods fun(clay:string):string[]
@@ -143,7 +147,6 @@ do
   ---@return string[]
   function M.furrows(analysis, gravity, clods, trailing)
     local lines = {}
-    local rope = ropes.new()
     for li, cols in ipairs(analysis.line_cols) do
       if #cols == 0 then goto continue end
 
@@ -180,7 +183,7 @@ function M.plough(mode, gravity, max_cols)
   local bufnr = ni.get_current_buf()
   local range = vsel.range(bufnr)
   if range == nil then return jelly.warn("no selecting lines") end
-  if range.stop_line - range.start_line == 1 then return jelly.info("no need to furrow on one line") end
+  if range.stop_line - range.start_line < 2 then return jelly.warn("less than 2 lines") end
 
   local lines = buflines.lines(bufnr, range.start_line, range.stop_line)
 
