@@ -49,7 +49,7 @@ return function()
 
   local lines = buflines.lines(host_bufnr, range.start_line, range.stop_line)
 
-  local form_bufnr = Ephemeral({ modifiable = true, undolevels = 5, namepat = "furrow://{bufnr}" }, { "spc", "left", "3" })
+  local form_bufnr = Ephemeral({ modifiable = true, undolevels = 5, namepat = "furrow://{bufnr}" }, { " ", "left", "3" })
 
   local xmids = {}
   xmids.mode = place_input_title(form_bufnr, 0, "mode")

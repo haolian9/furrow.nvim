@@ -9,7 +9,7 @@ local M = {}
 ---@field clods fun(clay:string):string[] @apply to cols[0:-1], before padding
 ---@field trailing string @apply to cols[0:-1], after padding
 
-M["spc"] = {
+M[" "] = {
   pattern = [[\s+]],
   clods = function(clay) return { clay } end,
   trailing = " ",
@@ -24,6 +24,12 @@ M["="] = {
 M[","] = {
   pattern = [[\s*,\s*]],
   clods = function(clay) return { clay, "," } end,
+  trailing = " ",
+}
+
+M[":"] = {
+  pattern = [[\s*:\s*]],
+  clods = function(clay) return { clay, ":" } end,
   trailing = " ",
 }
 

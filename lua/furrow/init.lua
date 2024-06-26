@@ -172,11 +172,11 @@ do
   end
 end
 
----@param mode? 'spc'|'='|','
+---@param mode? ' '|'='|','|':'
 ---@param gravity? furrow.Gravity
 ---@param max_cols? integer @nil=16
 function M.plough(mode, gravity, max_cols)
-  mode = mode or "spc"
+  mode = mode or " "
   max_cols = max_cols or 16
   gravity = gravity or "left"
 
