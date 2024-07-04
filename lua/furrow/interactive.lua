@@ -18,7 +18,6 @@ local preview_ns = ni.create_namespace("furrow:interactive:preview")
 local function get_anchor_line(bufnr, xmid)
   local xm = ni.buf_get_extmark_by_id(bufnr, form_ns, xmid, { details = true })
   if #xm == 0 then return end
-  ---@diagnostic disable-next-line: undefined-field
   if xm[3].invalid then return end
   local lnum = xm[1]
   local line = buflines.line(bufnr, lnum)

@@ -29,10 +29,8 @@ return function(str, delimiting_pattern)
       ---0-based, (inclusive, exclusive)
       local start, stop = regex:match_str(remain)
       if start and stop then
-        start = start + 1 --1-based, inclusive
-        stop = stop + 1 --1-based, exclusive
-        chunk = string.sub(remain, 1, start - 1)
-        remain = string.sub(remain, stop)
+        chunk = string.sub(remain, 1, start + 1 - 1)
+        remain = string.sub(remain, stop + 1)
       else
         chunk = remain
         assert(chunk ~= "")
