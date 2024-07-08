@@ -33,8 +33,6 @@ local function place_input_title(bufnr, lnum, title)
   return ni.buf_set_extmark(bufnr, form_ns, lnum, 0, {
     virt_text = { { title, "question" } },
     virt_text_pos = "eol",
-    invalidate = true,
-    undo_restore = true,
   })
 end
 
@@ -123,8 +121,6 @@ return function()
         ni.buf_set_extmark(host_bufnr, preview_ns, lnum, 0, {
           virt_text = { { line }, blanks },
           virt_text_pos = "overlay",
-          invalidate = true,
-          undo_restore = false,
         })
       end
     end,
