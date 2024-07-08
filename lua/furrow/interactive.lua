@@ -61,7 +61,7 @@ return function()
     form_winid = rifts.open.win(form_bufnr, true, { relative = "cursor", col = col, row = row, width = 25, height = 3 })
   end
 
-  local aug = augroups.BufAugroup(form_bufnr, false)
+  local aug = augroups.BufAugroup(form_bufnr, "furrow", false)
 
   local furrows
 
