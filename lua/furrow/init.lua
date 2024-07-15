@@ -181,7 +181,7 @@ function M.plough(mode, gravity, max_cols)
   gravity = gravity or "left"
 
   local bufnr = ni.get_current_buf()
-  local range = vsel.range(bufnr)
+  local range = vsel.range(bufnr, true)
   if range == nil then return jelly.warn("no selecting lines") end
   if range.stop_line - range.start_line < 2 then return jelly.warn("less than 2 lines") end
 

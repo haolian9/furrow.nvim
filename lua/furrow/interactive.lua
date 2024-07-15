@@ -40,7 +40,7 @@ return function()
   local host_winid = ni.get_current_win()
   local host_bufnr = ni.win_get_buf(host_winid)
 
-  local range = vsel.range(host_bufnr)
+  local range = vsel.range(host_bufnr, true)
   if range == nil then return jelly.warn("no selecting lines") end
   if range.stop_line - range.start_line < 2 then return jelly.warn("less than 2 lines") end
 
