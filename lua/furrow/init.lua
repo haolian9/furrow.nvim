@@ -1,13 +1,14 @@
 local M = {}
 
+local ropes = require("string.buffer")
+
 local buflines = require("infra.buflines")
 local dictlib = require("infra.dictlib")
-local jelly = require("infra.jellyfish")("", "debug")
+local jelly = require("infra.jellyfish")("furrow", "debug")
 local ni = require("infra.ni")
 local vsel = require("infra.vsel")
 
 local colspliter = require("furrow.colspliter")
-local ropes = require("string.buffer")
 local profiles = require("furrow.profiles")
 
 ---@class furrow.Analysis
