@@ -12,7 +12,7 @@ https://github.com/haolian9/zongzi/assets/6236829/207f9930-a653-46d2-9ea4-52cb8e
 * very few usecases, limited by my experiences
 
 ## prerequisites
-* nvim 0.10.*
+* nvim 0.11.*
 * haolian9/infra.nvim
 
 ## usage
@@ -20,6 +20,7 @@ https://github.com/haolian9/zongzi/assets/6236829/207f9930-a653-46d2-9ea4-52cb8e
 my personal config:
 ```
 cmds.create("Furrow", function() require("furrow.interactive")() end, { nargs = 0, range = true })
+m.x("<cr>", [[:lua require"furrow.interactive"()<cr>]])
 ```
 
 ## about the name
