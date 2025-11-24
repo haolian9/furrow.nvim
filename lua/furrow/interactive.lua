@@ -1,7 +1,7 @@
 local augroups = require("infra.augroups")
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
-local jelly = require("infra.jellyfish")("furrow.interactive", "debug")
+local jelly = require("infra.jellyfish")("furrow.interactive", "info")
 local bufmap = require("infra.keymap.buffer")
 local ni = require("infra.ni")
 local rifts = require("infra.rifts")

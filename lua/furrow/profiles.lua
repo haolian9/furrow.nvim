@@ -33,4 +33,10 @@ M[":"] = {
   trailing = " ",
 }
 
+M["#"] = {
+  pattern = [[\s*#\s*]],
+  clods = function(clay) return { clay } end,
+  trailing = " # ",
+}
+
 return M
