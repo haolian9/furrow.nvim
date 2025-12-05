@@ -99,7 +99,7 @@ function M.analyse(raw_lines, delimiting_pattern, max_cols)
 end
 
 do
-  ---@alias furrow.Gravity 'left'|'center'|'right'
+  ---@alias furrow.Gravity 'left'|'center'|'mid'|'right'
 
   ---@param rope string.buffer
   ---@param clods string[]
@@ -114,7 +114,7 @@ do
       return
     end
 
-    if pad_gravity == "center" then
+    if pad_gravity == "center" or pad_gravity == "mid" then
       local left = string.rep(" ", math.floor(short / 2))
       local right = string.rep(" ", math.ceil(short / 2))
       rope:put(left)
